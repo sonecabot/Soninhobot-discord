@@ -87,9 +87,7 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(name='/silenciar', value='Silencia um usuário (perm. necessária)', inline=False)
     embed.add_field(name='/limpar', value='Limpa mensagens no canal (perm. necessária)', inline=False)
     embed.add_field(name='/lembrar', value='Cria um lembrete', inline=False)
-    embed.add_field(name='/versiculo-diario', value='Mostra o versículo do dia', inline=False)
-    embed.add_field(name='/pesquisar-biblia', value='Pesquisa versículos por palavra-chave', inline=False)
-    embed.add_field(name='/versiculo', value='Busca um versículo específico', inline=False)
+    embed.add_field(name='**Comandos Bíblicos (com prefixo *):**', value='Use `*ajuda biblia` para ver comandos bíblicos', inline=False)
     embed.set_footer(text='Inspirado em YAGPDB.xyz')
     await interaction.response.send_message(embed=embed)
 
@@ -257,124 +255,209 @@ async def remind(interaction: discord.Interaction, minutos: int, mensagem: str):
     await asyncio.sleep(minutos*60)
     await interaction.followup.send(f'{interaction.user.mention}, lembrete: {mensagem}')
 
-# Versículo diário
-@bot.tree.command(name='versiculo-diario', description='Mostra o versículo do dia')
-async def daily_verse(interaction: discord.Interaction):
+# ===== COMANDOS BÍBLICOS COM PREFIXO =====
+
+# Função para buscar versículo na API
+async def buscar_versiculo(livro, capitulo, versiculo):
     try:
-        # API gratuita para versículos bíblicos
-        response = requests.get('https://bible-api.com/john%203:16?translation=almeida')
-        
+        url = f"https://www.abibliadigital.com.br/api/verses/nvi/{livro}/{capitulo}/{versiculo}"
+        response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            
-            embed = discord.Embed(
-                title="📖 Versículo do Dia",
-                description=f"*{data['text'].strip()}*",
-                color=0x8B4513
-            )
-            embed.add_field(name="Referência", value=data['reference'], inline=False)
-            embed.add_field(name="Tradução", value=data['translation_name'], inline=True)
-            embed.set_footer(text="Que Deus abençoe seu dia! ✨")
-            
-            await interaction.response.send_message(embed=embed)
-        else:
-            await interaction.response.send_message("Erro ao buscar versículo. Tente novamente.", ephemeral=True)
+            return data
+        return None
     except Exception as e:
-        logger.error(f'Erro no comando versículo diário: {e}')
-        await interaction.response.send_message("Erro ao buscar versículo. Tente novamente.", ephemeral=True)
+        logger.error(f"Erro ao buscar versículo: {e}")
+        return None
 
-# Pesquisar na Bíblia
-@bot.tree.command(name='pesquisar-biblia', description='Pesquisa versículos por palavra-chave')
-@app_commands.describe(palavra='Palavra ou frase para pesquisar')
-async def search_bible(interaction: discord.Interaction, palavra: str):
+# Função para buscar versículo aleatório
+async def buscar_versiculo_aleatorio():
     try:
-        # Versículos pré-definidos por temas comuns
-        verses_db = {
-            'amor': [
-                {'ref': 'João 3:16', 'text': 'Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.'},
-                {'ref': '1 Coríntios 13:4', 'text': 'O amor é sofredor, é benigno; o amor não é invejoso; o amor não trata com leviandade, não se ensoberbece.'}
-            ],
-            'paz': [
-                {'ref': 'João 14:27', 'text': 'Deixo-vos a paz, a minha paz vos dou; não vo-la dou como o mundo a dá. Não se turbe o vosso coração, nem se atemorize.'},
-                {'ref': 'Filipenses 4:7', 'text': 'E a paz de Deus, que excede todo o entendimento, guardará os vossos corações e os vossos sentimentos em Cristo Jesus.'}
-            ],
-            'esperança': [
-                {'ref': 'Jeremias 29:11', 'text': 'Porque bem sei os pensamentos que tenho a vosso respeito, diz o Senhor; pensamentos de paz, e não de mal, para vos dar o fim que esperais.'},
-                {'ref': 'Romanos 15:13', 'text': 'Ora, o Deus de esperança vos encha de todo o gozo e paz em crença, para que abundeis em esperança pela virtude do Espírito Santo.'}
-            ],
-            'força': [
-                {'ref': 'Isaías 40:31', 'text': 'Mas os que esperam no Senhor renovarão as forças, subirão com asas como águias; correrão, e não se cansarão; caminharão, e não se fatigarão.'},
-                {'ref': 'Filipenses 4:13', 'text': 'Posso todas as coisas em Cristo que me fortalece.'}
-            ],
-            'fé': [
-                {'ref': 'Hebreus 11:1', 'text': 'Ora, a fé é o firme fundamento das coisas que se esperam, e a prova das coisas que se não veem.'},
-                {'ref': 'Marcos 11:24', 'text': 'Por isso vos digo que todas as coisas que pedirdes, orando, crede receber, e tê-las-eis.'}
-            ]
-        }
-        
-        palavra_lower = palavra.lower()
-        found_verses = []
-        
-        # Busca por palavras-chave
-        for tema, verses in verses_db.items():
-            if palavra_lower in tema or any(palavra_lower in verse['text'].lower() for verse in verses):
-                found_verses.extend(verses)
-        
-        if found_verses:
-            verse = random.choice(found_verses)
-            embed = discord.Embed(
-                title=f"📜 Resultado para: '{palavra}'",
-                description=f"*{verse['text']}*",
-                color=0x4169E1
-            )
-            embed.add_field(name="Referência", value=verse['ref'], inline=False)
-            embed.set_footer(text="Continue buscando a Palavra! 🙏")
-            await interaction.response.send_message(embed=embed)
-        else:
-            embed = discord.Embed(
-                title="📜 Pesquisa Bíblica",
-                description=f"Não encontrei versículos relacionados a '{palavra}'.\n\nTente palavras como: amor, paz, esperança, força, fé",
-                color=0xFF6347
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            
+        url = "https://www.abibliadigital.com.br/api/verses/nvi/random"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        return None
     except Exception as e:
-        logger.error(f'Erro na pesquisa bíblica: {e}')
-        await interaction.response.send_message("Erro ao pesquisar. Tente novamente.", ephemeral=True)
+        logger.error(f"Erro ao buscar versículo aleatório: {e}")
+        return None
 
-# Buscar versículo específico
-@bot.tree.command(name='versiculo', description='Busca um versículo específico')
-@app_commands.describe(referencia='Referência do versículo (ex: João 3:16)')
-async def get_verse(interaction: discord.Interaction, referencia: str):
-    try:
-        # Remove espaços e formata a referência para a API
-        ref_formatted = referencia.replace(' ', '%20')
-        url = f'https://bible-api.com/{ref_formatted}?translation=almeida'
+# Comando para pesquisar versículo específico
+@bot.command(name='versiculo')
+async def versiculo_comando(ctx, livro: str, capitulo: int, versiculo: int, canal: discord.TextChannel = None):
+    """
+    Busca um versículo específico da Bíblia
+    Uso: *versiculo joão 3 16 [#canal]
+    """
+    canal_destino = canal or ctx.channel
+    
+    # Verificar se tem permissão para enviar no canal especificado
+    if canal and not canal.permissions_for(ctx.author).send_messages:
+        await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
+        return
+    
+    await ctx.send("🔍 Buscando versículo...")
+    
+    dados = await buscar_versiculo(livro.lower(), capitulo, versiculo)
+    
+    if dados:
+        embed = discord.Embed(
+            title=f"📖 {dados['book']['name']} {dados['chapter']}:{dados['number']}",
+            description=dados['text'],
+            color=0x4A90E2
+        )
+        embed.add_field(name="Versão", value="NVI (Nova Versão Internacional)", inline=False)
+        embed.set_footer(text=f"Solicitado por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
         
+        await canal_destino.send(embed=embed)
+        
+        if canal != ctx.channel:
+            await ctx.send(f"✅ Versículo enviado para {canal.mention}")
+    else:
+        await ctx.send("❌ Versículo não encontrado. Verifique se o livro, capítulo e versículo estão corretos.")
+
+# Comando para versículo diário
+@bot.command(name='versiculo diario')
+async def versiculo_diario(ctx, canal: discord.TextChannel = None):
+    """
+    Envia um versículo aleatório do dia
+    Uso: *versiculo diario [#canal]
+    """
+    canal_destino = canal or ctx.channel
+    
+    # Verificar se tem permissão para enviar no canal especificado
+    if canal and not canal.permissions_for(ctx.author).send_messages:
+        await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
+        return
+    
+    await ctx.send("🙏 Buscando versículo do dia...")
+    
+    dados = await buscar_versiculo_aleatorio()
+    
+    if dados:
+        embed = discord.Embed(
+            title=f"🌅 Versículo do Dia - {dados['book']['name']} {dados['chapter']}:{dados['number']}",
+            description=dados['text'],
+            color=0xFFD700
+        )
+        embed.add_field(name="Versão", value="NVI (Nova Versão Internacional)", inline=False)
+        embed.set_footer(text=f"Versículo do dia solicitado por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
+        
+        await canal_destino.send(embed=embed)
+        
+        if canal != ctx.channel:
+            await ctx.send(f"✅ Versículo do dia enviado para {canal.mention}")
+    else:
+        await ctx.send("❌ Erro ao buscar versículo do dia. Tente novamente mais tarde.")
+
+# Comando para pesquisar por palavra-chave
+@bot.command(name='pesquisar biblia')
+async def pesquisar_biblia(ctx, *, termo: str, canal: discord.TextChannel = None):
+    """
+    Pesquisa versículos que contenham uma palavra ou frase
+    Uso: *pesquisar biblia amor [#canal]
+    """
+    canal_destino = canal or ctx.channel
+    
+    # Verificar se tem permissão para enviar no canal especificado
+    if canal and not canal.permissions_for(ctx.author).send_messages:
+        await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
+        return
+    
+    # Remover menção de canal do termo se existir
+    if canal:
+        termo = termo.replace(canal.mention, "").strip()
+    
+    await ctx.send(f"🔍 Pesquisando por '{termo}' na Bíblia...")
+    
+    try:
+        url = f"https://www.abibliadigital.com.br/api/verses/nvi/search/{termo}"
         response = requests.get(url)
         
         if response.status_code == 200:
-            data = response.json()
+            dados = response.json()
             
-            if 'text' in data and data['text']:
-                embed = discord.Embed(
-                    title="📖 Versículo Encontrado",
-                    description=f"*{data['text'].strip()}*",
-                    color=0x32CD32
-                )
-                embed.add_field(name="Referência", value=data['reference'], inline=False)
-                embed.add_field(name="Tradução", value=data.get('translation_name', 'Almeida'), inline=True)
-                embed.set_footer(text="Que a Palavra seja uma lâmpada para seus pés! 💡")
+            if dados and len(dados) > 0:
+                # Limitar a 5 resultados
+                resultados = dados[:5]
                 
-                await interaction.response.send_message(embed=embed)
+                embed = discord.Embed(
+                    title=f"📚 Resultados da pesquisa: '{termo}'",
+                    description=f"Encontrados {len(dados)} versículos. Mostrando os primeiros {len(resultados)}:",
+                    color=0x9B59B6
+                )
+                
+                for i, verso in enumerate(resultados, 1):
+                    texto = verso['text']
+                    if len(texto) > 200:
+                        texto = texto[:200] + "..."
+                    
+                    embed.add_field(
+                        name=f"{i}. {verso['book']['name']} {verso['chapter']}:{verso['number']}",
+                        value=texto,
+                        inline=False
+                    )
+                
+                embed.add_field(name="Versão", value="NVI (Nova Versão Internacional)", inline=False)
+                embed.set_footer(text=f"Pesquisa solicitada por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
+                
+                await canal_destino.send(embed=embed)
+                
+                if canal != ctx.channel:
+                    await ctx.send(f"✅ Resultados da pesquisa enviados para {canal.mention}")
             else:
-                await interaction.response.send_message(f"Versículo '{referencia}' não encontrado. Verifique a referência.", ephemeral=True)
+                await ctx.send(f"❌ Nenhum versículo encontrado com o termo '{termo}'.")
         else:
-            await interaction.response.send_message(f"Versículo '{referencia}' não encontrado. Verifique a referência.", ephemeral=True)
-            
+            await ctx.send("❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
+    
     except Exception as e:
-        logger.error(f'Erro ao buscar versículo: {e}')
-        await interaction.response.send_message("Erro ao buscar versículo. Verifique a referência e tente novamente.", ephemeral=True)
+        logger.error(f"Erro na pesquisa bíblica: {e}")
+        await ctx.send("❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
+
+# Comando de ajuda para comandos bíblicos
+@bot.command(name='ajuda biblia')
+async def ajuda_biblia(ctx):
+    """Mostra ajuda para comandos bíblicos"""
+    embed = discord.Embed(
+        title="📖 Comandos Bíblicos - Ajuda",
+        description="Comandos disponíveis para consultar a Bíblia:",
+        color=0x3498DB
+    )
+    
+    embed.add_field(
+        name="*versiculo [livro] [capítulo] [versículo] [#canal]",
+        value="Busca um versículo específico\nExemplo: `*versiculo joão 3 16 #geral`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="*versiculo diario [#canal]",
+        value="Envia um versículo aleatório do dia\nExemplo: `*versiculo diario #devocional`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="*pesquisar biblia [termo] [#canal]",
+        value="Pesquisa versículos por palavra-chave\nExemplo: `*pesquisar biblia amor #estudo`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="*ajuda biblia",
+        value="Mostra esta mensagem de ajuda",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📌 Observações:",
+        value="• O parâmetro [#canal] é opcional\n• Se não especificar canal, enviará no canal atual\n• Use espaços normais entre as palavras\n• Versões disponíveis: NVI",
+        inline=False
+    )
+    
+    embed.set_footer(text="API: abibliadigital.com.br")
+    
+    await ctx.send(embed=embed)
 
 # Tratamento de erros
 @bot.tree.error
