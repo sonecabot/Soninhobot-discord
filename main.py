@@ -1,3 +1,4 @@
+
 """
 Bot Discord completo inspirado em YAGPDB.xyz com comandos slash
 
@@ -87,7 +88,7 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(name='/silenciar', value='Silencia um usuário (perm. necessária)', inline=False)
     embed.add_field(name='/limpar', value='Limpa mensagens no canal (perm. necessária)', inline=False)
     embed.add_field(name='/lembrar', value='Cria um lembrete', inline=False)
-    embed.add_field(name='**Comandos Bíblicos (com prefixo *):**', value='Use `*ajuda biblia` para ver comandos bíblicos', inline=False)
+    embed.add_field(name='**Comandos Bíblicos (com prefixo *):**', value='Use `*ajuda_biblia` para ver comandos bíblicos', inline=False)
     embed.set_footer(text='Inspirado em YAGPDB.xyz')
     await interaction.response.send_message(embed=embed)
 
@@ -285,11 +286,15 @@ async def buscar_versiculo_aleatorio():
 
 # Comando para pesquisar versículo específico
 @bot.command(name='versiculo')
-async def versiculo_comando(ctx, livro: str, capitulo: int, versiculo: int, canal: discord.TextChannel = None):
+async def versiculo_comando(ctx, livro: str = None, capitulo: int = None, versiculo: int = None, canal: discord.TextChannel = None):
     """
     Busca um versículo específico da Bíblia
     Uso: *versiculo joão 3 16 [#canal]
     """
+    if not livro or not capitulo or not versiculo:
+        await ctx.send("❌ Uso correto: `*versiculo <livro> <capítulo> <versículo> [#canal]`\nExemplo: `*versiculo joão 3 16`")
+        return
+    
     canal_destino = canal or ctx.channel
     
     # Verificar se tem permissão para enviar no canal especificado
@@ -297,7 +302,7 @@ async def versiculo_comando(ctx, livro: str, capitulo: int, versiculo: int, cana
         await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
         return
     
-    await ctx.send("🔍 Buscando versículo...")
+    msg = await ctx.send("🔍 Buscando versículo...")
     
     dados = await buscar_versiculo(livro.lower(), capitulo, versiculo)
     
@@ -311,18 +316,16 @@ async def versiculo_comando(ctx, livro: str, capitulo: int, versiculo: int, cana
         embed.set_footer(text=f"Solicitado por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
         
         await canal_destino.send(embed=embed)
-        
-        if canal != ctx.channel:
-            await ctx.send(f"✅ Versículo enviado para {canal.mention}")
+        await msg.edit(content=f"✅ Versículo enviado!" if canal == ctx.channel else f"✅ Versículo enviado para {canal.mention}")
     else:
-        await ctx.send("❌ Versículo não encontrado. Verifique se o livro, capítulo e versículo estão corretos.")
+        await msg.edit(content="❌ Versículo não encontrado. Verifique se o livro, capítulo e versículo estão corretos.")
 
 # Comando para versículo diário
-@bot.command(name='versiculo diario')
+@bot.command(name='versiculo_diario')
 async def versiculo_diario(ctx, canal: discord.TextChannel = None):
     """
     Envia um versículo aleatório do dia
-    Uso: *versiculo diario [#canal]
+    Uso: *versiculo_diario [#canal]
     """
     canal_destino = canal or ctx.channel
     
@@ -331,7 +334,7 @@ async def versiculo_diario(ctx, canal: discord.TextChannel = None):
         await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
         return
     
-    await ctx.send("🙏 Buscando versículo do dia...")
+    msg = await ctx.send("🙏 Buscando versículo do dia...")
     
     dados = await buscar_versiculo_aleatorio()
     
@@ -345,19 +348,31 @@ async def versiculo_diario(ctx, canal: discord.TextChannel = None):
         embed.set_footer(text=f"Versículo do dia solicitado por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
         
         await canal_destino.send(embed=embed)
-        
-        if canal != ctx.channel:
-            await ctx.send(f"✅ Versículo do dia enviado para {canal.mention}")
+        await msg.edit(content=f"✅ Versículo do dia enviado!" if canal == ctx.channel else f"✅ Versículo do dia enviado para {canal.mention}")
     else:
-        await ctx.send("❌ Erro ao buscar versículo do dia. Tente novamente mais tarde.")
+        await msg.edit(content="❌ Erro ao buscar versículo do dia. Tente novamente mais tarde.")
 
 # Comando para pesquisar por palavra-chave
-@bot.command(name='pesquisar biblia')
-async def pesquisar_biblia(ctx, *, termo: str, canal: discord.TextChannel = None):
+@bot.command(name='pesquisar_biblia')
+async def pesquisar_biblia(ctx, *, args):
     """
     Pesquisa versículos que contenham uma palavra ou frase
-    Uso: *pesquisar biblia amor [#canal]
+    Uso: *pesquisar_biblia amor [#canal]
     """
+    # Separar o termo do canal se fornecido
+    parts = args.split()
+    canal = None
+    termo = args
+    
+    # Verificar se o último argumento é uma menção de canal
+    if parts and parts[-1].startswith('<#') and parts[-1].endswith('>'):
+        try:
+            canal_id = int(parts[-1][2:-1])
+            canal = ctx.guild.get_channel(canal_id)
+            termo = ' '.join(parts[:-1])
+        except ValueError:
+            pass
+    
     canal_destino = canal or ctx.channel
     
     # Verificar se tem permissão para enviar no canal especificado
@@ -365,11 +380,11 @@ async def pesquisar_biblia(ctx, *, termo: str, canal: discord.TextChannel = None
         await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
         return
     
-    # Remover menção de canal do termo se existir
-    if canal:
-        termo = termo.replace(canal.mention, "").strip()
+    if not termo.strip():
+        await ctx.send("❌ Uso correto: `*pesquisar_biblia <termo> [#canal]`\nExemplo: `*pesquisar_biblia amor`")
+        return
     
-    await ctx.send(f"🔍 Pesquisando por '{termo}' na Bíblia...")
+    msg = await ctx.send(f"🔍 Pesquisando por '{termo}' na Bíblia...")
     
     try:
         url = f"https://www.abibliadigital.com.br/api/verses/nvi/search/{termo}"
@@ -403,20 +418,18 @@ async def pesquisar_biblia(ctx, *, termo: str, canal: discord.TextChannel = None
                 embed.set_footer(text=f"Pesquisa solicitada por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
                 
                 await canal_destino.send(embed=embed)
-                
-                if canal != ctx.channel:
-                    await ctx.send(f"✅ Resultados da pesquisa enviados para {canal.mention}")
+                await msg.edit(content=f"✅ Resultados da pesquisa enviados!" if canal == ctx.channel else f"✅ Resultados da pesquisa enviados para {canal.mention}")
             else:
-                await ctx.send(f"❌ Nenhum versículo encontrado com o termo '{termo}'.")
+                await msg.edit(content=f"❌ Nenhum versículo encontrado com o termo '{termo}'.")
         else:
-            await ctx.send("❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
+            await msg.edit(content="❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
     
     except Exception as e:
         logger.error(f"Erro na pesquisa bíblica: {e}")
-        await ctx.send("❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
+        await msg.edit(content="❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
 
 # Comando de ajuda para comandos bíblicos
-@bot.command(name='ajuda biblia')
+@bot.command(name='ajuda_biblia')
 async def ajuda_biblia(ctx):
     """Mostra ajuda para comandos bíblicos"""
     embed = discord.Embed(
@@ -432,19 +445,19 @@ async def ajuda_biblia(ctx):
     )
     
     embed.add_field(
-        name="*versiculo diario [#canal]",
-        value="Envia um versículo aleatório do dia\nExemplo: `*versiculo diario #devocional`",
+        name="*versiculo_diario [#canal]",
+        value="Envia um versículo aleatório do dia\nExemplo: `*versiculo_diario #devocional`",
         inline=False
     )
     
     embed.add_field(
-        name="*pesquisar biblia [termo] [#canal]",
-        value="Pesquisa versículos por palavra-chave\nExemplo: `*pesquisar biblia amor #estudo`",
+        name="*pesquisar_biblia [termo] [#canal]",
+        value="Pesquisa versículos por palavra-chave\nExemplo: `*pesquisar_biblia amor #estudo`",
         inline=False
     )
     
     embed.add_field(
-        name="*ajuda biblia",
+        name="*ajuda_biblia",
         value="Mostra esta mensagem de ajuda",
         inline=False
     )
@@ -459,7 +472,7 @@ async def ajuda_biblia(ctx):
     
     await ctx.send(embed=embed)
 
-# Tratamento de erros
+# Tratamento de erros para comandos slash
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.MissingPermissions):
@@ -470,4 +483,22 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         await interaction.response.send_message("Ocorreu um erro ao executar o comando.", ephemeral=True)
         logger.error(f'Erro no comando: {error}')
 
-bot.run(TOKEN)
+# Tratamento de erros para comandos de prefixo
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return  # Ignorar comandos não encontrados
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"❌ Argumento obrigatório ausente. Use `*ajuda_biblia` para ver como usar os comandos.")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send(f"❌ Argumento inválido. Use `*ajuda_biblia` para ver como usar os comandos.")
+    else:
+        logger.error(f'Erro no comando: {error}')
+        await ctx.send("❌ Ocorreu um erro ao executar o comando.")
+
+if __name__ == "__main__":
+    try:
+        bot.run(TOKEN)
+    except Exception as e:
+        print(f"Erro ao iniciar o bot: {e}")
+        logger.error(f"Erro ao iniciar o bot: {e}")
