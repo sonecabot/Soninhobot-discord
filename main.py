@@ -49,8 +49,17 @@ async def on_ready():
     # Sincronizar comandos slash
     try:
         synced = await bot.tree.sync()
-        logger.info(f'Sincronizados {len(synced)} comandos slash')
-        print(f'Sincronizados {len(synced)} comandos slash')
+        logger.info(f'Sincronizados {len(synced)} comandos slash globalmente')
+        print(f'Sincronizados {len(synced)} comandos slash globalmente')
+        
+        # Sincronização específica para cada servidor (mais rápida)
+        for guild in bot.guilds:
+            try:
+                await bot.tree.sync(guild=guild)
+                logger.info(f'Comandos sincronizados para o servidor: {guild.name}')
+                print(f'Comandos sincronizados para o servidor: {guild.name}')
+            except Exception as e:
+                logger.error(f'Erro ao sincronizar no servidor {guild.name}: {e}')
     except Exception as e:
         logger.error(f'Falha ao sincronizar comandos: {e}')
 
