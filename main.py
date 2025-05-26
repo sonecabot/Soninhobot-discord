@@ -33,7 +33,7 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
+bot = commands.Bot(command_prefix='*', intents=intents, help_command=None)
 
 # Configuração do logging
 logging.basicConfig(level=logging.INFO)
