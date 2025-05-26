@@ -1,3 +1,4 @@
+
 """
 Bot Discord completo inspirado em YAGPDB.xyz com comandos slash
 
