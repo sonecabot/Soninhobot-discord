@@ -48,13 +48,13 @@ async def on_ready():
     logger.info(f'Bot online! Logado como {bot.user} (ID: {bot.user.id})')
     await bot.change_presence(activity=discord.Game(name="Use /ajuda para comandos"))
     print(f'Bot online! Logado como {bot.user} (ID: {bot.user.id})')
-    
+
     # Sincronizar comandos slash
     try:
         synced = await bot.tree.sync()
         logger.info(f'Sincronizados {len(synced)} comandos slash globalmente')
         print(f'Sincronizados {len(synced)} comandos slash globalmente')
-        
+
         # Sincronização específica para cada servidor (mais rápida)
         for guild in bot.guilds:
             try:
@@ -146,15 +146,15 @@ async def kick(interaction: discord.Interaction, membro: discord.Member, motivo:
     if not interaction.user.guild_permissions.kick_members:
         await interaction.response.send_message('Você não tem permissão para expulsar membros.', ephemeral=True)
         return
-    
+
     if membro == interaction.user:
         await interaction.response.send_message('Você não pode se expulsar.', ephemeral=True)
         return
-    
+
     if not membro.kickable:
         await interaction.response.send_message('Não posso expulsar esse usuário.', ephemeral=True)
         return
-    
+
     try:
         await membro.kick(reason=motivo)
         await interaction.response.send_message(f'Usuário {membro} expulso. Motivo: {motivo or "Nenhum fornecido"}')
@@ -172,15 +172,15 @@ async def ban(interaction: discord.Interaction, membro: discord.Member, motivo: 
     if not interaction.user.guild_permissions.ban_members:
         await interaction.response.send_message('Você não tem permissão para banir membros.', ephemeral=True)
         return
-    
+
     if membro == interaction.user:
         await interaction.response.send_message('Você não pode se banir.', ephemeral=True)
         return
-    
+
     if not membro.bannable:
         await interaction.response.send_message('Não posso banir esse usuário.', ephemeral=True)
         return
-    
+
     try:
         await membro.ban(reason=motivo)
         await interaction.response.send_message(f'Usuário {membro} banido. Motivo: {motivo or "Nenhum fornecido"}')
@@ -198,10 +198,10 @@ async def mute(interaction: discord.Interaction, membro: discord.Member, motivo:
     if not interaction.user.guild_permissions.manage_roles:
         await interaction.response.send_message('Você não tem permissão para gerenciar cargos.', ephemeral=True)
         return
-    
+
     guild = interaction.guild
     role = discord.utils.get(guild.roles, name="Muted")
-    
+
     if role is None:
         try:
             role = await guild.create_role(name="Muted",
@@ -213,11 +213,11 @@ async def mute(interaction: discord.Interaction, membro: discord.Member, motivo:
             await interaction.response.send_message('Falha ao criar cargo Muted.', ephemeral=True)
             logger.error(e)
             return
-    
+
     if role in membro.roles:
         await interaction.response.send_message('Este usuário já está silenciado.', ephemeral=True)
         return
-    
+
     try:
         await membro.add_roles(role, reason=motivo)
         await interaction.response.send_message(f'Usuário {membro} silenciado. Motivo: {motivo or "Nenhum fornecido"}')
@@ -232,11 +232,11 @@ async def clear(interaction: discord.Interaction, quantidade: int = 5):
     if not interaction.user.guild_permissions.manage_messages:
         await interaction.response.send_message('Você não tem permissão para gerenciar mensagens.', ephemeral=True)
         return
-    
+
     if quantidade < 1 or quantidade > 100:
         await interaction.response.send_message("Por favor, informe um número entre 1 e 100.", ephemeral=True)
         return
-    
+
     await interaction.response.defer()
     deleted = await interaction.channel.purge(limit=quantidade)
     await interaction.followup.send(f'{len(deleted)} mensagens apagadas.', ephemeral=True)
@@ -251,7 +251,7 @@ async def remind(interaction: discord.Interaction, minutos: int, mensagem: str):
     if minutos <= 0:
         await interaction.response.send_message('O tempo deve ser positivo.', ephemeral=True)
         return
-    
+
     await interaction.response.send_message(f'Ok! Vou te lembrar em {minutos} minuto(s). ⏰')
     await asyncio.sleep(minutos*60)
     await interaction.followup.send(f'{interaction.user.mention}, lembrete: {mensagem}')
@@ -294,18 +294,18 @@ async def versiculo_comando(ctx, livro: str = None, capitulo: int = None, versic
     if not livro or not capitulo or not versiculo:
         await ctx.send("❌ Uso correto: `*versiculo <livro> <capítulo> <versículo> [#canal]`\nExemplo: `*versiculo joão 3 16`")
         return
-    
+
     canal_destino = canal or ctx.channel
-    
+
     # Verificar se tem permissão para enviar no canal especificado
     if canal and not canal.permissions_for(ctx.author).send_messages:
         await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
         return
-    
+
     msg = await ctx.send("🔍 Buscando versículo...")
-    
+
     dados = await buscar_versiculo(livro.lower(), capitulo, versiculo)
-    
+
     if dados:
         embed = discord.Embed(
             title=f"📖 {dados['book']['name']} {dados['chapter']}:{dados['number']}",
@@ -314,7 +314,7 @@ async def versiculo_comando(ctx, livro: str = None, capitulo: int = None, versic
         )
         embed.add_field(name="Versão", value="NVI (Nova Versão Internacional)", inline=False)
         embed.set_footer(text=f"Solicitado por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
-        
+
         await canal_destino.send(embed=embed)
         await msg.edit(content=f"✅ Versículo enviado!" if canal == ctx.channel else f"✅ Versículo enviado para {canal.mention}")
     else:
@@ -328,16 +328,16 @@ async def versiculo_diario(ctx, canal: discord.TextChannel = None):
     Uso: *versiculo_diario [#canal]
     """
     canal_destino = canal or ctx.channel
-    
+
     # Verificar se tem permissão para enviar no canal especificado
     if canal and not canal.permissions_for(ctx.author).send_messages:
         await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
         return
-    
+
     msg = await ctx.send("🙏 Buscando versículo do dia...")
-    
+
     dados = await buscar_versiculo_aleatorio()
-    
+
     if dados:
         embed = discord.Embed(
             title=f"🌅 Versículo do Dia - {dados['book']['name']} {dados['chapter']}:{dados['number']}",
@@ -346,7 +346,7 @@ async def versiculo_diario(ctx, canal: discord.TextChannel = None):
         )
         embed.add_field(name="Versão", value="NVI (Nova Versão Internacional)", inline=False)
         embed.set_footer(text=f"Versículo do dia solicitado por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
-        
+
         await canal_destino.send(embed=embed)
         await msg.edit(content=f"✅ Versículo do dia enviado!" if canal == ctx.channel else f"✅ Versículo do dia enviado para {canal.mention}")
     else:
@@ -363,7 +363,7 @@ async def pesquisar_biblia(ctx, *, args):
     parts = args.split()
     canal = None
     termo = args
-    
+
     # Verificar se o último argumento é uma menção de canal
     if parts and parts[-1].startswith('<#') and parts[-1].endswith('>'):
         try:
@@ -372,58 +372,58 @@ async def pesquisar_biblia(ctx, *, args):
             termo = ' '.join(parts[:-1])
         except ValueError:
             pass
-    
+
     canal_destino = canal or ctx.channel
-    
+
     # Verificar se tem permissão para enviar no canal especificado
     if canal and not canal.permissions_for(ctx.author).send_messages:
         await ctx.send("❌ Você não tem permissão para enviar mensagens nesse canal.", delete_after=10)
         return
-    
+
     if not termo.strip():
         await ctx.send("❌ Uso correto: `*pesquisar_biblia <termo> [#canal]`\nExemplo: `*pesquisar_biblia amor`")
         return
-    
+
     msg = await ctx.send(f"🔍 Pesquisando por '{termo}' na Bíblia...")
-    
+
     try:
         url = f"https://www.abibliadigital.com.br/api/verses/nvi/search/{termo}"
         response = requests.get(url)
-        
+
         if response.status_code == 200:
             dados = response.json()
-            
+
             if dados and len(dados) > 0:
                 # Limitar a 5 resultados
                 resultados = dados[:5]
-                
+
                 embed = discord.Embed(
                     title=f"📚 Resultados da pesquisa: '{termo}'",
                     description=f"Encontrados {len(dados)} versículos. Mostrando os primeiros {len(resultados)}:",
                     color=0x9B59B6
                 )
-                
+
                 for i, verso in enumerate(resultados, 1):
                     texto = verso['text']
                     if len(texto) > 200:
                         texto = texto[:200] + "..."
-                    
+
                     embed.add_field(
                         name=f"{i}. {verso['book']['name']} {verso['chapter']}:{verso['number']}",
                         value=texto,
                         inline=False
                     )
-                
+
                 embed.add_field(name="Versão", value="NVI (Nova Versão Internacional)", inline=False)
                 embed.set_footer(text=f"Pesquisa solicitada por {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
-                
+
                 await canal_destino.send(embed=embed)
                 await msg.edit(content=f"✅ Resultados da pesquisa enviados!" if canal == ctx.channel else f"✅ Resultados da pesquisa enviados para {canal.mention}")
             else:
                 await msg.edit(content=f"❌ Nenhum versículo encontrado com o termo '{termo}'.")
         else:
             await msg.edit(content="❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
-    
+
     except Exception as e:
         logger.error(f"Erro na pesquisa bíblica: {e}")
         await msg.edit(content="❌ Erro ao realizar a pesquisa. Tente novamente mais tarde.")
@@ -437,39 +437,39 @@ async def ajuda_biblia(ctx):
         description="Comandos disponíveis para consultar a Bíblia:",
         color=0x3498DB
     )
-    
+
     embed.add_field(
         name="*versiculo [livro] [capítulo] [versículo] [#canal]",
         value="Busca um versículo específico\nExemplo: `*versiculo joão 3 16 #geral`",
         inline=False
     )
-    
+
     embed.add_field(
         name="*versiculo_diario [#canal]",
         value="Envia um versículo aleatório do dia\nExemplo: `*versiculo_diario #devocional`",
         inline=False
     )
-    
+
     embed.add_field(
         name="*pesquisar_biblia [termo] [#canal]",
         value="Pesquisa versículos por palavra-chave\nExemplo: `*pesquisar_biblia amor #estudo`",
         inline=False
     )
-    
+
     embed.add_field(
         name="*ajuda_biblia",
         value="Mostra esta mensagem de ajuda",
         inline=False
     )
-    
+
     embed.add_field(
         name="📌 Observações:",
         value="• O parâmetro [#canal] é opcional\n• Se não especificar canal, enviará no canal atual\n• Use espaços normais entre as palavras\n• Versões disponíveis: NVI",
         inline=False
     )
-    
+
     embed.set_footer(text="API: abibliadigital.com.br")
-    
+
     await ctx.send(embed=embed)
 
 # Tratamento de erros para comandos slash
